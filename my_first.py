@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QApplication, QMainWindow, QPushButton, QPlainText
     QTextBrowser, QLabel
 from PySide2.QtUiTools import QUiLoader
 from PySide2 import QtGui
-from PySide2.QtCore import Signal, QObject
+from PySide2.QtCore import Signal, QObject,QCoreApplication
 from PIL import Image
 import torch.utils.data
 from torchvision.utils import save_image
@@ -23,10 +23,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 没gpu�
 
 class MySignals(QObject):
     # 定义一种信号，参赛是str，即文件的地址
-    loadlabel = Signal(str)
-
+    ms = Signal(str)
 
 global_ms = MySignals()  # 实例化信号
+input_num_ms = MySignals()
 
 
 class ImgWindow():  # 显示图片的窗口
@@ -35,14 +35,13 @@ class ImgWindow():  # 显示图片的窗口
         # 使用ui文件导入定义界面类
         self.ui = QUiLoader().load('img_window.ui')
         self.ui.Button_exit.clicked.connect(self.exit_b)  #
-        global_ms.loadlabel.connect(self.load_img)  # 连接信号与槽
+        global_ms.ms.connect(self.load_img)  # 连接信号与槽
 
     def exit_b(self):
         os.remove("temp.png")  # 删除生成的临时文件
         self.ui.close()
 
     def load_img(self, object):
-        print(object)
         im = Image.open(object)  # 这里把原来的jpg转化成png之后打开
         im.save('temp.png')
         pixmap = QtGui.QPixmap('temp.png')
@@ -55,11 +54,15 @@ class InputNumWindow():  # 用户输入图片张数的窗口
     def __init__(self):
         self.ui = QUiLoader().load('input_num.ui')
         self.ui.ok_btn.clicked.connect(self.get_num)
-        # self.ui.cancel_btn.clicked.connect(self.)
-
+        self.ui.cancel_btn.clicked.connect(self.close_ui)
     def get_num(self):
         num = self.ui.user_input_num.text()
-        return num
+        self.close_ui()
+        input_num_ms.ms.emit(num)
+        self.close_ui()
+    def close_ui(self):
+        self.ui.close()
+
 
 
 class MainWindow():  # 主窗口
@@ -71,6 +74,7 @@ class MainWindow():  # 主窗口
         self.ui.Button_openimg.clicked.connect(self.open_img)
         self.ui.Button_randnum.clicked.connect(self.input_randnum)
         self.ui.Button_consequence.clicked.connect(self.predict_res)
+        input_num_ms.ms.connect(self.input_randnum)
 
     def load_model(self):
         FileDialog = QFileDialog(self.ui.Button_loadmodel)  # 实例化
@@ -90,14 +94,13 @@ class MainWindow():  # 主窗口
             return
         self.ui.View_img_log.setPlainText("成功加载图片\n图片路径:" + image_file)
         self.window2 = ImgWindow()
-        global_ms.loadlabel.emit(image_file)  # 注意只有先实例化之后 发送信号 对应的槽才会执行
+        global_ms.ms.emit(image_file)  # 注意只有先实例化之后 发送信号 对应的槽才会执行
         self.window2.ui.show()
 
-    def input_randnum(self):
+    def input_randnum(self,num_ms):
         self.window3 = InputNumWindow()
         self.window3.ui.show()
-        num = self.window3.get_num()
-        num = int(num)
+        num = int(num_ms)
         G = generator(100, 3136).to(device)
         model_file = self.ui.View_model_log.toPlainText().split('路径:')[1]  # 模型保存地址
         my_net = torch.load(model_file, map_location=torch.device('cpu'))  # 加载模型,没gpu的话将内存定位cpu
