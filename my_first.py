@@ -7,22 +7,27 @@ from PIL import Image
 import torch.utils.data
 from torchvision.utils import save_image
 import os
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import cv2
 import numpy as np
-from Module.GAN测试 import generator
-import Module.测试 as RegconizeNum     #模块从Module包里导入“测试”
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  #没gpu的话就用cpu
+from Module.随机生成数字 import generator
+import Module.识别数字 as RegconizeNum  # 模块从Module包里导入“识别数字”
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # 没gpu的话就用cpu
+
 
 class MySignals(QObject):
     # 定义一种信号，参赛是str，即文件的地址
     loadlabel = Signal(str)
 
+
 global_ms = MySignals()  # 实例化信号
 
-#class InputNumWindow():
 
 class ImgWindow():  # 显示图片的窗口
     def __init__(self):
@@ -46,6 +51,17 @@ class ImgWindow():  # 显示图片的窗口
         label.setScaledContents(True)  # 自适应
 
 
+class InputNumWindow():  # 用户输入图片张数的窗口
+    def __init__(self):
+        self.ui = QUiLoader().load('input_num.ui')
+        self.ui.ok_btn.clicked.connect(self.get_num)
+        # self.ui.cancel_btn.clicked.connect(self.)
+
+    def get_num(self):
+        num = self.ui.user_input_num.text()
+        return num
+
+
 class MainWindow():  # 主窗口
     def __init__(self):
         super().__init__()
@@ -67,7 +83,7 @@ class MainWindow():  # 主窗口
     def open_img(self):  # 这里和load_model差不多
         FileDialog = QFileDialog(self.ui.Button_openimg)
         FileDialog.setFileMode(QFileDialog.AnyFile)
-        image_file, _ = FileDialog.getOpenFileName(self.ui.Button_openimg, 'open file', './',
+        image_file, _ = FileDialog.getOpenFileName(self.ui.Button_openimg, 'open file', './Handwriting num pic',
                                                    'Image files (*.jpg *.gif *.png *.jpeg)')
         if not image_file:
             QMessageBox.warning(self.ui.Button_openimg, "警告", "文件错误或打开文件失败！", QMessageBox.Yes)
@@ -76,28 +92,30 @@ class MainWindow():  # 主窗口
         self.window2 = ImgWindow()
         global_ms.loadlabel.emit(image_file)  # 注意只有先实例化之后 发送信号 对应的槽才会执行
         self.window2.ui.show()
-        return image_file
 
     def input_randnum(self):
-        DEVICE = "cuda"
+        self.window3 = InputNumWindow()
+        self.window3.ui.show()
+        num = self.window3.get_num()
+        num = int(num)
         G = generator(100, 3136).to(device)
-        my_net = torch.load(r"generator.pth",map_location=torch.device('cpu'))  # 加载模型,没gpu的话将内存定位cpu
+        model_file = self.ui.View_model_log.toPlainText().split('路径:')[1]  # 模型保存地址
+        my_net = torch.load(model_file, map_location=torch.device('cpu'))  # 加载模型,没gpu的话将内存定位cpu
         G.load_state_dict(my_net)
-        num = 10  # 用户输入需要的图像张数
+        # num = 10 # 用户输入需要的图像张数
         filename = "Handwriting num pic"
-        current_path = os.getcwd()              #返回当前
-        path_item = os.listdir(current_path)    #返回（列表）将当前目录的所有内容
-        picfile_path = "{}\Handwriting num pic".format(current_path)  #图片保存进哪个文件夹的路径
+        current_path = os.getcwd()  # 返回当前
+        path_item = os.listdir(current_path)  # 返回（列表）将当前目录的所有内容
+        picfile_path = "{}\Handwriting num pic".format(current_path)  # 图片保存进哪个文件夹的路径
         if filename not in path_item:
-            os.mkdir(filename)          #在当前目录创建文件夹
-        print(type(filename),1)
+            os.mkdir(filename)  # 在当前目录创建文件夹
 
         for i in range(num):
             z = torch.randn(1, 100).to(device)
             # z = torch.ones(100).unsqueeze(0).to(device)
             # z = Variable(torch.randn(1, 100))
             fake_img = G(z)
-            path = "./{}/pic_{}.png".format(filename, i+1)          #保存图片吗的路径
+            path = "./{}/pic_{}.png".format(filename, i + 1)  # 保存图片吗的路径
             save_image(fake_img, path.format(i))
             str = "成功生成{num}张手写数字图\n图片路径:{path}".format(num=num, path=picfile_path)
             self.ui.View_randnum_log.setPlainText(str)
