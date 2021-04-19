@@ -53,7 +53,7 @@ class MainWindow():  # 主窗口
         self.ui = QUiLoader().load('my_ui.ui')
         self.ui.Button_loadmodel.clicked.connect(self.load_model)
         self.ui.Button_openimg.clicked.connect(self.open_img)
-        #self.ui.Button_randnum.clicked.connect(self.input_randnum)
+        self.ui.Button_randnum.clicked.connect(self.input_randnum)
         self.ui.Button_consequence.clicked.connect(self.predict_res)
 
     def load_model(self):
@@ -84,12 +84,23 @@ class MainWindow():  # 主窗口
         my_net = torch.load(r"generator.pth",map_location=torch.device('cpu'))  # 加载模型,没gpu的话将内存定位cpu
         G.load_state_dict(my_net)
         num = 10  # 用户输入需要的图像张数
+        filename = "Handwriting num pic"
+        current_path = os.getcwd()              #返回当前
+        path_item = os.listdir(current_path)    #返回（列表）将当前目录的所有内容
+        picfile_path = "{}\Handwriting num pic".format(current_path)  #图片保存进哪个文件夹的路径
+        if filename not in path_item:
+            os.mkdir(filename)          #在当前目录创建文件夹
+        print(type(filename),1)
+
         for i in range(num):
             z = torch.randn(1, 100).to(device)
             # z = torch.ones(100).unsqueeze(0).to(device)
             # z = Variable(torch.randn(1, 100))
             fake_img = G(z)
-            save_image(fake_img, './dccc_test/test_{0}.png'.format(i))
+            path = "./{}/pic_{}.png".format(filename, i+1)          #保存图片吗的路径
+            save_image(fake_img, path.format(i))
+            str = "成功生成{num}张手写数字图\n图片路径:{path}".format(num=num, path=picfile_path)
+            self.ui.View_randnum_log.setPlainText(str)
 
     def predict_res(self):
         image_file = self.ui.View_img_log.toPlainText().split('路径:')[1]
