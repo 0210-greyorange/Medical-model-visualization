@@ -22,6 +22,27 @@ class MySignals(QObject):
 
 global_ms = MySignals()  # 实例化信号
 
+class InputNumWindow():
+    def __init__(self):
+        super().__init__()
+        # 使用ui文件导入定义界面类
+        self.ui = QUiLoader().load('img_window.ui')
+        self.ui.Button_exit.clicked.connect(self.exit_b)  #
+        global_ms.loadlabel.connect(self.load_img)  # 连接信号与槽
+
+    def exit_b(self):
+        os.remove("temp.png")  # 删除生成的临时文件
+        self.ui.close()
+
+    def load_img(self, object):
+        print(object)
+        im = Image.open(object)  # 这里把原来的jpg转化成png之后打开
+        im.save('temp.png')
+        pixmap = QtGui.QPixmap('temp.png')
+        label = self.ui.img_label
+        label.setPixmap(pixmap)  # 加载图片
+        label.setScaledContents(True)  # 自适应
+
 class ImgWindow():  # 显示图片的窗口
     def __init__(self):
         super().__init__()
@@ -51,6 +72,7 @@ class MainWindow():  # 主窗口
         self.ui = QUiLoader().load('my_ui.ui')
         self.ui.Button_loadmodel.clicked.connect(self.load_model)
         self.ui.Button_openimg.clicked.connect(self.open_img)
+        self.ui.Button_inputnum.clicked.connect(self.input_randnum)
         self.ui.Button_consequence.clicked.connect(self.input_randnum)
 
     def load_model(self):
