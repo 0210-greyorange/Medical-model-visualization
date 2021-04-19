@@ -53,7 +53,7 @@ class MainWindow():  # 主窗口
         self.ui = QUiLoader().load('my_ui.ui')
         self.ui.Button_loadmodel.clicked.connect(self.load_model)
         self.ui.Button_openimg.clicked.connect(self.open_img)
-        #self.ui.Button_inputnum.clicked.connect(self.input_randnum)
+        #self.ui.Button_randnum.clicked.connect(self.input_randnum)
         self.ui.Button_consequence.clicked.connect(self.predict_res)
 
     def load_model(self):
