@@ -57,9 +57,9 @@ class InputNumWindow():  # 用户输入图片张数的窗口
         self.ui.cancel_btn.clicked.connect(self.close_ui)
     def get_num(self):
         num = self.ui.user_input_num.text()
-        self.close_ui()
         input_num_ms.ms.emit(num)
         self.close_ui()
+
     def close_ui(self):
         self.ui.close()
 
@@ -72,10 +72,12 @@ class MainWindow():  # 主窗口
         self.ui = QUiLoader().load('my_ui.ui')
         self.ui.Button_loadmodel.clicked.connect(self.load_model)
         self.ui.Button_openimg.clicked.connect(self.open_img)
-        self.ui.Button_randnum.clicked.connect(self.input_randnum)
+        self.ui.Button_randnum.clicked.connect(self.open_input_window)
         self.ui.Button_consequence.clicked.connect(self.predict_res)
-        input_num_ms.ms.connect(self.input_randnum)
-
+        input_num_ms.ms.connect(self.get_mynum)
+    def get_mynum(self,num):
+        self.my_num=num
+        self.input_randnum()
     def load_model(self):
         FileDialog = QFileDialog(self.ui.Button_loadmodel)  # 实例化
         FileDialog.setFileMode(QFileDialog.AnyFile)  # 可以打开任何文件
@@ -96,11 +98,11 @@ class MainWindow():  # 主窗口
         self.window2 = ImgWindow()
         global_ms.ms.emit(image_file)  # 注意只有先实例化之后 发送信号 对应的槽才会执行
         self.window2.ui.show()
-
-    def input_randnum(self,num_ms):
+    def open_input_window(self):
         self.window3 = InputNumWindow()
         self.window3.ui.show()
-        num = int(num_ms)
+    def input_randnum(self):#num_ms是通过messege接受到的图片个数信息
+        num = int(self.my_num)
         G = generator(100, 3136).to(device)
         model_file = self.ui.View_model_log.toPlainText().split('路径:')[1]  # 模型保存地址
         my_net = torch.load(model_file, map_location=torch.device('cpu'))  # 加载模型,没gpu的话将内存定位cpu
